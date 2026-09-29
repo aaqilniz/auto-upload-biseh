@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>BISE Hyderabad Enrollment Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF and jsPDF-AutoTable for client-side PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body class="bg-slate-100 text-slate-800 p-8 font-sans">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- Header -->
+        <header class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">BISE Hyderabad Enrollment Dashboard</h1>
+                <p class="text-slate-500 text-sm mt-1">Manage data parsing, image uploads, portal automation, and PDF exports.</p>
+            </div>
+            
+            <!-- Global Configuration: School Name & Single-Year Session -->
+            <div class="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div>
+                    <label for="cfgSchool" class="block text-xs font-semibold text-slate-600 uppercase">School Name</label>
+                    <input type="text" id="cfgSchool" value="GBHS CHUKHI"
+                        class="mt-1 px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="cfgSession" class="block text-xs font-semibold text-slate-600 uppercase">Session Year</label>
+                    <input type="number" id="cfgSession"
+                        class="mt-1 px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-28" />
+                </div>
+            </div>
+        </header>
+
+        <!-- Controls Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-semibold mb-4">1. Upload Student Images</h2>
+                <form id="imagesForm" class="space-y-4">
+                    <input type="file" id="images" accept="image/*" multiple
+                        class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        required />
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 transition">Upload
+                        Images</button>
+                </form>
+            </section>
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-semibold mb-4">2. Upload Excel Data</h2>
+                <form id="excelForm" class="space-y-4">
+                    <input type="file" id="excelFile" accept=".xlsx, .xls"
+                        class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        required />
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 transition">Parse
+                        Excel File</button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Actions Banner -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <h2 class="text-lg font-semibold">3. Portal Execution</h2>
+            <div class="flex flex-wrap gap-4">
+                <button id="btnRunUpload"
+                    class="bg-emerald-600 text-white py-2 px-6 rounded-md font-medium hover:bg-emerald-700 transition">Start
+                    Bulk Portal Upload</button>
+                <button id="btnFetchRecords"
+                    class="bg-slate-700 text-white py-2 px-6 rounded-md font-medium hover:bg-slate-800 transition">Fetch
+                    Scraped Portal Records</button>
+            </div>
+            <div id="statusBanner" class="hidden p-3 rounded-md text-sm font-medium"></div>
+        </section>
+
+        <!-- Data Tables View -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Tabs Header & Export Button -->
+            <div class="flex flex-wrap items-center justify-between border-b border-slate-200 bg-slate-50 pr-4">
+                <div class="flex border-b border-slate-200 md:border-b-0">
+                    <button id="tabProcessed" onclick="switchTab('processed')"
+                        class="px-6 py-3 font-semibold text-sm text-blue-600 border-b-2 border-blue-600 bg-white">
+                        Processed Excel Data (<span id="countProcessed">0</span>)
+                    </button>
+                    <button id="tabUploaded" onclick="switchTab('uploaded')"
+                        class="px-6 py-3 font-semibold text-sm text-slate-500 hover:text-slate-700">
+                        Uploaded Portal Data (<span id="countUploaded">0</span>)
+                    </button>
+                    <button id="tabFailed" onclick="switchTab('failed')"
+                        class="px-6 py-3 font-semibold text-sm text-slate-500 hover:text-slate-700">
+                        Failed Validation / Uploads (<span id="countFailed">0</span>)
+                    </button>
+                </div>
+
+                <button onclick="exportCurrentTabToPDF()"
+                    class="my-2 bg-red-600 hover:bg-red-700 text-white py-1.5 px-4 rounded-md font-medium text-sm flex items-center gap-2 transition">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                        <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z"/>
+                    </svg>
+                    Export Section PDF
+                </button>
+            </div>
+
+            <!-- Overlap Warning Message Banner (Failed Tab Only) -->
+            <div id="failedOverlapAlert" class="hidden bg-amber-50 border-b border-amber-200 p-4 text-amber-800 text-sm font-medium flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span id="failedOverlapText">Notice: Some failed records are already uploaded on the portal.</span>
+            </div>
+
+            <!-- Stats Bar for Processed Data Tab -->
+            <div id="statsBar"
+                class="hidden bg-blue-50/70 border-b border-blue-100 p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                    <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Records</p>
+                    <p id="statTotal" class="text-xl font-bold text-slate-800">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                    <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Uploaded</p>
+                    <p id="statUploaded" class="text-xl font-bold text-emerald-600">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                    <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Pending Upload</p>
+                    <p id="statPending" class="text-xl font-bold text-amber-600">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                    <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Completion</p>
+                    <p id="statPercent" class="text-xl font-bold text-blue-600">0%</p>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="p-6 overflow-x-auto min-h-[300px]">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead id="tableHead"
+                        class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase text-xs select-none">
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-200 text-slate-700"></tbody>
+                </table>
+                <div id="emptyMessage" class="hidden text-center text-slate-400 py-12">No records found.</div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Set Default Session to current year + 1 (e.g. 2026 + 1 = 2027)
+        const defaultSessionYear = String(new Date().getFullYear() + 1);
+        document.getElementById('cfgSession').value = defaultSessionYear;
+
+        let currentTab = 'processed';
+        let rawProcessedData = [];
+        let rawUploadedData = [];
+        let rawFailedData = [];
+        let currentRenderedList = [];
+
+        // Sorting state management per tab
+        const sortState = {
+            processed: { key: 'grNumber', direction: 'asc' },
+            uploaded: { key: 'grNumber', direction: 'asc' },
+            failed: { key: 'grNumber', direction: 'asc' }
+        };
+
+        const setStatus = (msg, isError = false) => {
+            const banner = document.getElementById('statusBanner');
+            banner.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-blue-100', 'text-blue-700');
+            banner.classList.add(isError ? 'bg-red-100' : 'bg-blue-100', isError ? 'text-red-700' : 'text-blue-700');
+            banner.textContent = msg;
+        };
+
+        const switchTab = (tab) => {
+            currentTab = tab;
+            ['processed', 'uploaded', 'failed'].forEach(t => {
+                const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                btn.className = (t === tab)
+                    ? 'px-6 py-3 font-semibold text-sm text-blue-600 border-b-2 border-blue-600 bg-white'
+                    : 'px-6 py-3 font-semibold text-sm text-slate-500 hover:text-slate-700';
+            });
+
+            document.getElementById('statsBar').classList.toggle('hidden', tab !== 'processed');
+            renderCurrentTable();
+        };
+
+        const handleSort = (key) => {
+            const current = sortState[currentTab];
+            if (current.key === key) {
+                current.direction = current.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                current.key = key;
+                current.direction = 'asc';
+            }
+            renderCurrentTable();
+        };
+
+        const sortArray = (items, key, direction) => {
+            return [...items].sort((a, b) => {
+                let valA = a[key] ?? '';
+                let valB = b[key] ?? '';
+
+                if (typeof valA === 'boolean') valA = valA ? 1 : 0;
+                if (typeof valB === 'boolean') valB = valB ? 1 : 0;
+
+                const numA = Number(valA);
+                const numB = Number(valB);
+
+                if (!isNaN(numA) && !isNaN(numB) && String(valA).trim() !== '' && String(valB).trim() !== '') {
+                    return direction === 'asc' ? numA - numB : numB - numA;
+                }
+
+                return direction === 'asc'
+                    ? String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' })
+                    : String(valB).localeCompare(String(valA), undefined, { numeric: true, sensitivity: 'base' });
+            });
+        };
+
+        const uploadSingleRecord = async (grNumber, btnElement) => {
+            btnElement.disabled = true;
+            btnElement.textContent = 'Uploading...';
+            setStatus(`Uploading single record GR# ${grNumber}...`);
+
+            const schoolName = document.getElementById('cfgSchool').value || 'GBHS CHUKHI';
+            const sessionVal = document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1);
+
+            try {
+                const res = await fetch('/api/upload-single', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grNumber, schoolName, session: sessionVal })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setStatus(data.message);
+                    loadTableData();
+                } else {
+                    setStatus(data.error || 'Single upload failed.', true);
+                    btnElement.disabled = false;
+                    btnElement.textContent = 'Upload';
+                }
+            } catch (err) {
+                setStatus('Error: ' + err.message, true);
+                btnElement.disabled = false;
+                btnElement.textContent = 'Upload';
+            }
+        };
+
+        const renderTableHeaders = (columns) => {
+            const currentSort = sortState[currentTab];
+            return `<tr>${columns.map(col => {
+                if (!col.key) {
+                    return `<th class="px-4 py-3 font-semibold">${col.label}</th>`;
+                }
+                const isSorted = currentSort.key === col.key;
+                const arrow = isSorted ? (currentSort.direction === 'asc' ? ' ▲' : ' ▼') : ' <span class="text-slate-300">▲</span>';
+                return `
+                    <th onclick="handleSort('${col.key}')" class="px-4 py-3 font-semibold cursor-pointer hover:bg-slate-200 transition group">
+                        <div class="flex items-center gap-1">
+                            <span>${col.label}</span>
+                            <span class="text-xs ${isSorted ? 'text-blue-600 font-bold' : ''}">${arrow}</span>
+                        </div>
+                    </th>`;
+            }).join('')}</tr>`;
+        };
+
+        const renderCurrentTable = () => {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            const emptyMsg = document.getElementById('emptyMessage');
+            const overlapAlert = document.getElementById('failedOverlapAlert');
+            const uploadedGrSet = new Set(rawUploadedData.map(r => String(r.grNumber)));
+
+            tbody.innerHTML = '';
+            overlapAlert.classList.add('hidden');
+
+            if (currentTab === 'processed') {
+                const columns = [
+                    { label: 'GR#', key: 'grNumber' },
+                    { label: 'Student Name', key: 'name' },
+                    { label: 'Father Name', key: 'fatherName' },
+                    { label: 'Caste / Surname', key: 'caste' },
+                    { label: 'DOB', key: 'dateOfBirth' },
+                    { label: 'NADRA / CNIC', key: 'studentNadraId' },
+                    { label: 'Portal Status', key: 'isUploaded' },
+                    { label: 'Action', key: null }
+                ];
+
+                const augmentedData = rawProcessedData.map(item => ({
+                    ...item,
+                    caste: item.caste || item.surname || '-',
+                    surname: item.surname || item.caste || '-',
+                    isUploaded: uploadedGrSet.has(String(item.grNumber))
+                }));
+
+                currentRenderedList = sortArray(augmentedData, sortState.processed.key, sortState.processed.direction);
+                thead.innerHTML = renderTableHeaders(columns);
+
+                if (currentRenderedList.length === 0) {
+                    emptyMsg.classList.remove('hidden');
+                } else {
+                    emptyMsg.classList.add('hidden');
+                    currentRenderedList.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50';
+                        const isUploaded = item.isUploaded;
+
+                        const statusBadge = isUploaded
+                            ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">Uploaded</span>`
+                            : `<span class="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-semibold">Pending</span>`;
+
+                        const actionBtn = isUploaded
+                            ? `<button disabled class="bg-slate-200 text-slate-400 py-1 px-3 rounded text-xs cursor-not-allowed">Uploaded</button>`
+                            : `<button onclick="uploadSingleRecord('${item.grNumber}', this)" class="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-xs font-medium transition">Upload</button>`;
+
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 font-medium">${item.grNumber || '-'}</td>
+                            <td class="px-4 py-3">${item.name || '-'}</td>
+                            <td class="px-4 py-3">${item.fatherName || '-'}</td>
+                            <td class="px-4 py-3">${item.caste || '-'}</td>
+                            <td class="px-4 py-3">${item.dateOfBirth || '-'}</td>
+                            <td class="px-4 py-3">${item.studentNadraId || '-'}</td>
+                            <td class="px-4 py-3">${statusBadge}</td>
+                            <td class="px-4 py-3">${actionBtn}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+            } else if (currentTab === 'uploaded') {
+                const columns = [
+                    { label: 'GR#', key: 'grNumber' },
+                    { label: 'Student Name', key: 'studentName' },
+                    { label: 'Father Name', key: 'fatherName' },
+                    { label: 'Enrollment No', key: 'enrollmentNo' },
+                    { label: 'Status', key: 'status' },
+                    { label: 'Challan No', key: 'challanNo' },
+                    { label: 'Fee', key: 'fee' }
+                ];
+
+                currentRenderedList = sortArray(rawUploadedData, sortState.uploaded.key, sortState.uploaded.direction);
+                thead.innerHTML = renderTableHeaders(columns);
+
+                if (currentRenderedList.length === 0) {
+                    emptyMsg.classList.remove('hidden');
+                } else {
+                    emptyMsg.classList.add('hidden');
+                    currentRenderedList.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50';
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 font-medium">${item.grNumber || '-'}</td>
+                            <td class="px-4 py-3">${item.studentName || '-'}</td>
+                            <td class="px-4 py-3">${item.fatherName || '-'}</td>
+                            <td class="px-4 py-3">${item.enrollmentNo || '-'}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">${item.status || 'Uploaded'}</span></td>
+                            <td class="px-4 py-3">${item.challanNo || '-'}</td>
+                            <td class="px-4 py-3">${item.fee || '-'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+            } else if (currentTab === 'failed') {
+                const columns = [
+                    { label: 'GR / ID', key: 'grNumber' },
+                    { label: 'Student Name', key: 'name' },
+                    { label: 'Father Name', key: 'fatherName' },
+                    { label: 'Caste / Surname', key: 'caste' },
+                    { label: 'Gender', key: 'gender' },
+                    { label: 'Portal Overlap', key: 'isAlreadyUploaded' },
+                    { label: 'Reasons / Failure Details', key: 'reasonsText' }
+                ];
+
+                const formattedFailed = rawFailedData.map(f => {
+                    const studentObj = f.student || f.data || f;
+                    const gr = String(f.grNumber || studentObj.grNumber || '');
+                    const surnameVal = f.caste || f.surname || studentObj.caste || studentObj.surname || '-';
+                    const isAlreadyUploaded = gr !== '' && uploadedGrSet.has(gr);
+
+                    return {
+                        ...f,
+                        grNumber: gr || '-',
+                        name: f.name || studentObj.name || studentObj.studentName || '-',
+                        fatherName: f.fatherName || studentObj.fatherName || '-',
+                        caste: surnameVal,
+                        surname: surnameVal,
+                        gender: f.gender || studentObj.gender || '-',
+                        isAlreadyUploaded,
+                        reasonsText: Array.isArray(f.reasons) ? 'Missing: ' + f.reasons.join(' | ') : String(f.reasons || '-')
+                    };
+                });
+
+                // Detect overlaps and render notice banner
+                const overlappingGRs = formattedFailed
+                    .filter(item => item.isAlreadyUploaded && item.grNumber !== '-')
+                    .map(item => item.grNumber);
+
+                if (overlappingGRs.length > 0) {
+                    overlapAlert.classList.remove('hidden');
+                    document.getElementById('failedOverlapText').innerHTML = 
+                        `<strong>Attention:</strong> ${overlappingGRs.length} record(s) in this failed list are already confirmed uploaded on the portal! (GR#: <strong>${overlappingGRs.join(', ')}</strong>)`;
+                }
+
+                currentRenderedList = sortArray(formattedFailed, sortState.failed.key, sortState.failed.direction);
+                thead.innerHTML = renderTableHeaders(columns);
+
+                if (currentRenderedList.length === 0) {
+                    emptyMsg.classList.remove('hidden');
+                } else {
+                    emptyMsg.classList.add('hidden');
+                    currentRenderedList.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50';
+
+                        const overlapBadge = item.isAlreadyUploaded
+                            ? `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-semibold">Uploaded on Portal</span>`
+                            : `<span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium">Not Uploaded</span>`;
+
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 font-medium text-red-600">${item.grNumber}</td>
+                            <td class="px-4 py-3 font-medium text-slate-800">${item.name}</td>
+                            <td class="px-4 py-3 text-slate-700">${item.fatherName}</td>
+                            <td class="px-4 py-3 text-slate-700">${item.caste}</td>
+                            <td class="px-4 py-3 text-slate-700">${item.gender}</td>
+                            <td class="px-4 py-3">${overlapBadge}</td>
+                            <td class="px-4 py-3 text-red-700">${item.reasonsText}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        };
+
+        const exportCurrentTabToPDF = () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'pt', 'a4');
+
+            const schoolName = document.getElementById('cfgSchool').value || 'GBHS CHUKHI';
+            const sessionVal = document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1);
+
+            let sectionTitle = '';
+            let tableHeaders = [];
+            let tableRows = [];
+            let overlapNoticeText = '';
+
+            if (currentTab === 'processed') {
+                sectionTitle = 'Successfully Processed Excel Data';
+                tableHeaders = [['S.No', 'GR#', 'Student Name', 'Father Name', 'Caste/Surname', 'Portal Status']];
+                tableRows = currentRenderedList.map((item, idx) => [
+                    idx + 1,
+                    item.grNumber || '-',
+                    item.name || '-',
+                    item.fatherName || '-',
+                    item.caste || item.surname || '-',
+                    item.isUploaded ? 'Uploaded' : 'Pending'
+                ]);
+            } else if (currentTab === 'uploaded') {
+                sectionTitle = 'Successfully Uploaded Portal Records (Scraped)';
+                tableHeaders = [['S.No', 'GR#', 'Student Name', 'Father Name', 'Enrollment No', 'Challan No', 'Fee']];
+                tableRows = currentRenderedList.map((item, idx) => [
+                    idx + 1,
+                    item.grNumber || '-',
+                    item.studentName || '-',
+                    item.fatherName || '-',
+                    item.enrollmentNo || '-',
+                    item.challanNo || '-',
+                    item.fee || '-'
+                ]);
+            } else if (currentTab === 'failed') {
+                sectionTitle = 'Failed Records (Validation & Upload Failure)';
+                tableHeaders = [['S.No', 'GR#', 'Student Name', 'Father Name', 'Portal Status', 'Failure Reason']];
+                tableRows = currentRenderedList.map((item, idx) => [
+                    idx + 1,
+                    item.grNumber || '-',
+                    item.name || item.studentName || '-',
+                    item.fatherName || '-',
+                    item.isAlreadyUploaded ? 'Uploaded' : 'Not Uploaded',
+                    item.reasonsText || '-'
+                ]);
+
+                // Check for overlapping records to print on PDF
+                const overlappingGRs = currentRenderedList
+                    .filter(item => item.isAlreadyUploaded && item.grNumber !== '-')
+                    .map(item => item.grNumber);
+
+                if (overlappingGRs.length > 0) {
+                    overlapNoticeText = `NOTICE: ${overlappingGRs.length} failed record(s) are already uploaded on portal (GR#: ${overlappingGRs.join(', ')})`;
+                }
+            }
+
+            // Document Header
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text(schoolName.toUpperCase(), 40, 40);
+
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Board Enrollment Class 9th - Session ${sessionVal}`, 40, 58);
+            doc.text(`List: ${sectionTitle}`, 40, 74);
+
+            let startY = 95;
+
+            // Render Overlap Warning Box in PDF if applicable
+            if (overlapNoticeText) {
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(180, 83, 9); // Amber color
+                doc.setFillColor(254, 243, 199); // Amber light bg
+                doc.rect(40, 82, 515, 20, 'F');
+                doc.text(overlapNoticeText, 45, 95);
+                
+                // Reset colors for line and table
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'normal');
+                
+                doc.setLineWidth(1);
+                doc.line(40, 108, 555, 108);
+                startY = 120;
+            } else {
+                doc.setLineWidth(1);
+                doc.line(40, 84, 555, 84);
+            }
+
+            // AutoTable Rendering
+            doc.autoTable({
+                startY: startY,
+                head: tableHeaders,
+                body: tableRows,
+                theme: 'grid',
+                styles: { fontSize: 9, cellPadding: 5 },
+                headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+
+            doc.save(`${schoolName.replace(/\s+/g, '_')}_Class9_Session${sessionVal}_${currentTab}.pdf`);
+        };
+
+        const updateStats = () => {
+            const uploadedGrSet = new Set(rawUploadedData.map(r => String(r.grNumber)));
+            const total = rawProcessedData.length;
+            const uploadedCount = rawProcessedData.filter(r => uploadedGrSet.has(String(r.grNumber))).length;
+            const pendingCount = total - uploadedCount;
+            const percent = total > 0 ? Math.round((uploadedCount / total) * 100) : 0;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statUploaded').textContent = uploadedCount;
+            document.getElementById('statPending').textContent = pendingCount;
+            document.getElementById('statPercent').textContent = `${percent}%`;
+        };
+
+        const loadTableData = async () => {
+            try {
+                const [resProc, resUp, resFail] = await Promise.all([
+                    fetch('/api/data/processed'),
+                    fetch('/api/data/uploaded'),
+                    fetch('/api/data/failed')
+                ]);
+
+                rawProcessedData = await resProc.json();
+                rawUploadedData = await resUp.json();
+                rawFailedData = await resFail.json();
+
+                document.getElementById('countProcessed').textContent = rawProcessedData.length;
+                document.getElementById('countUploaded').textContent = rawUploadedData.length;
+                document.getElementById('countFailed').textContent = rawFailedData.length;
+
+                updateStats();
+                renderCurrentTable();
+            } catch (err) {
+                setStatus('Failed to fetch table records: ' + err.message, true);
+            }
+        };
+
+        document.getElementById('excelForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setStatus('Parsing Excel file...');
+            const formData = new FormData();
+            formData.append('excelFile', document.getElementById('excelFile').files[0]);
+
+            const res = await fetch('/api/upload-excel', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                setStatus(`Excel parsed: ${data.validStudents.length} valid records, ${data.failedRecords.length} failed validation.`);
+                loadTableData();
+            } else {
+                setStatus(data.error || 'Excel upload failed', true);
+            }
+        });
+
+        document.getElementById('imagesForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setStatus('Uploading images...');
+            const formData = new FormData();
+            for (let file of document.getElementById('images').files) {
+                formData.append('images', file);
+            }
+
+            const res = await fetch('/api/upload-images', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                setStatus(data.message);
+            } else {
+                setStatus(data.error || 'Image upload failed', true);
+            }
+        });
+
+        document.getElementById('btnRunUpload').addEventListener('click', async () => {
+            setStatus('Executing Playwright bulk upload...');
+            const schoolName = document.getElementById('cfgSchool').value || 'GBHS CHUKHI';
+            const sessionVal = document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1);
+
+            const res = await fetch('/api/run-upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uploadData: true, schoolName, session: sessionVal })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setStatus(`Automation completed. ${data.successfulRecords.length} successful, ${data.failedRecords.length} failed.`);
+                loadTableData();
+            } else {
+                setStatus(data.error || 'Upload script failed', true);
+            }
+        });
+
+        document.getElementById('btnFetchRecords').addEventListener('click', async () => {
+            setStatus('Scraping uploaded records from portal...');
+            const res = await fetch('/api/fetch-records');
+            const data = await res.json();
+            if (res.ok) {
+                setStatus(`Scraped ${data.records.length} records from portal.`);
+                loadTableData();
+            } else {
+                setStatus(data.error || 'Fetch script failed', true);
+            }
+        });
+
+        switchTab('processed');
+        loadTableData();
+    </script>
+</body>
+
+</html>

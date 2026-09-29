@@ -1,0 +1,7 @@
+.env
+images/*
+data.xlsx
+uploaded_records.json
+students.json
+failed_records.json
+node_modules
