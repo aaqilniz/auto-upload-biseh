@@ -45,7 +45,8 @@ function convertExcelToJson(excelFilePath, outputValidPath = 'students.json', ou
         if (!record || record.length === 0) continue;
 
         const currentClass = record[14];
-        if (currentClass !== 'IX') continue; // Process Class IX records only
+        const remarks = record[16];
+        if (currentClass !== 'IX' || remarks === 'Relieved') continue; // Process Currently Studying Class IX records only
 
         const grNumber = record[1] ? record[1].toString().trim() : null;
 

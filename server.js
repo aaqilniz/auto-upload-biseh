@@ -1,17 +1,16 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-
 const { convertExcelToJson } = require('./excelToJson');
 const { uploadToPortal } = require('./uploadPortal');
 const { fetchUploadedRecords } = require('./fetchUpload');
-
+const fs = require('fs');
+const UPLOADS_DIR = path.join(__dirname, 'images');
 const app = express();
-const PORT = process.env.PORT || 3000;
-
+const PORT = process.env.PORT || 3005;
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/uploads', express.static(path.join(__dirname, 'images')));
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -77,11 +76,19 @@ app.post('/api/run-upload', async (req, res) => {
     }
 });
 
-// API: Scrape Portal Data
+// Route: Scrape records from portal
 app.get('/api/fetch-records', async (req, res) => {
     try {
-        const result = await fetchUploadedRecords('uploaded_records.json');
-        res.json({ message: 'Portal records scraped successfully.', records: result.records });
+        const { username, password, session } = req.query;
+
+        // Ensure provided credentials take precedence
+        const result = await fetchUploadedRecords({
+            username: username || process.env.BISE_USERNAME,
+            password: password || process.env.BISE_PASSWORD,
+            session: session || process.env.BISE_SESSION
+        });
+
+        res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -118,6 +125,39 @@ app.post('/api/upload-single', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// GET /api/images - List all uploaded image filenames
+app.get('/api/images', (req, res) => {
+    fs.readdir(UPLOADS_DIR, (err, files) => {
+        if (err) {
+            if (err.code === 'ENOENT') return res.json([]);
+            return res.status(500).json({ error: 'Failed to read uploads directory' });
+        }
+
+        // Filter out non-image files if needed
+        const imageFiles = files.filter(file =>
+            /\.(jpg|jpeg|png|webp|gif)$/i.test(file)
+        );
+
+        res.json(imageFiles);
+    });
+});
+
+// DELETE /api/images/:filename - Delete a specific image
+app.delete('/api/images/:filename', (req, res) => {
+    const filename = path.basename(req.params.filename); // prevent directory traversal
+    const filePath = path.join(UPLOADS_DIR, filename);
+
+    fs.unlink(filePath, (err) => {
+        if (err) {
+            if (err.code === 'ENOENT') {
+                return res.status(404).json({ error: 'Image file not found' });
+            }
+            return res.status(500).json({ error: 'Failed to delete image' });
+        }
+        res.json({ message: `Image ${filename} deleted successfully` });
+    });
 });
 
 // Helper to safely read JSON files

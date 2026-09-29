@@ -21,7 +21,7 @@ async function uploadToPortal(jsonFilePathOrArray = 'students.json', uploadData 
         console.log(`\n⟳ Loaded ${validStudents.length} student records from ${absoluteJsonPath}`);
     }
 
-    const headless = false;
+    const headless = true;
     const browser = await chromium.launch({ headless, slowMo: 50 });
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 
@@ -43,8 +43,8 @@ async function uploadToPortal(jsonFilePathOrArray = 'students.json', uploadData 
         console.log('⟳ Navigating to BISE Hyderabad login page...');
         await page.goto('https://online.bisehyd.edu.pk/Account/Login?ReturnUrl=%2F');
 
-        await page.fill('input[name="email"]', process.env.BISE_USERNAME || 'your_username');
-        await page.fill('input[name="password"]', process.env.BISE_PASSWORD || 'your_password');
+        await page.fill('input[name="email"]', process.env.BISE_USERNAME || '');
+        await page.fill('input[name="password"]', process.env.BISE_PASSWORD || '');
 
         await Promise.all([
             page.waitForNavigation({ waitUntil: 'networkidle' }),

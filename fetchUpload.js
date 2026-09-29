@@ -1,29 +1,41 @@
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
 const { chromium } = require('playwright');
 
-/**
- * Log in to the BISE portal and extract all rows from the Enrollments table.
- */
-async function fetchUploadedRecords(outputPath = 'uploaded_records.json') {
-    const headless = false; // Set to true if you don't need visual debugging
-    const browser = await chromium.launch({ headless, slowMo: 50 });
-    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+async function fetchUploadedRecords(config = {}, outputPath = 'uploaded_records.json') {
+    const {
+        username = process.env.BISE_USERNAME || '424699',
+        password = process.env.BISE_PASSWORD || '424699',
+        session = process.env.BISE_SESSION || String(new Date().getFullYear() + 1),
+    } = config;
+    const headless = false;
+    const browser = await chromium.launch({
+        headless,
+        slowMo: 50
+    });
+
+    const context = await browser.newContext({
+        viewport: { width: 1280, height: 800 }
+    });
     const page = await context.newPage();
 
     try {
+        // 1. Initial Login
         console.log('⟳ Navigating to BISE Hyderabad login page...');
         await page.goto('https://online.bisehyd.edu.pk/Account/Login?ReturnUrl=%2F');
 
-        await page.fill('input[name="email"]', process.env.BISE_USERNAME || 'your_username');
-        await page.fill('input[name="password"]', process.env.BISE_PASSWORD || 'your_password');
+        await page.fill('input[name="email"]', username);
+        await page.fill('input[name="password"]', password);
 
-        await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle' }),
-            page.click('button[type="submit"], input[type="submit"]')
-        ]);
-        console.log('✓ Logged in successfully.');
+        console.log('⟳ Submitting login form...');
+        await page.click('button[type="submit"], input[type="submit"]');
+        await page.waitForTimeout(3000); // Allow login redirect to process
+
+        console.log('✓ Logged in successfully. Current URL:', page.url());
+
+        // 2. Direct navigation to SetupSession page
+        console.log('⟳ Navigating directly to /Home/SetupSession...');
+        await page.goto('https://online.bisehyd.edu.pk/Home/SetupSession');
 
         // Handle session selection safely whether it auto-submits on change or requires button click
         await page.selectOption('#session', '2027');
@@ -40,33 +52,31 @@ async function fetchUploadedRecords(outputPath = 'uploaded_records.json') {
             // If no submit button, allow network idle for auto-submit/AJAX navigation
             await page.waitForLoadState('networkidle');
         }
+        console.log(`✓ Session set to ${session}.`);
 
-        console.log('✓ Session selected.');
+        // 3. Direct navigation to Enrollments Index
+        console.log('⟳ Manually navigating to Enrollments Index...');
+        await page.goto('https://online.bisehyd.edu.pk/Enrollments/Index');
 
-        // Navigate to the Enrollments Index table page
-        console.log('⟳ Navigating to Enrollments Index...');
-        await page.goto('https://online.bisehyd.edu.pk/Enrollments/Index', { waitUntil: 'networkidle' });
+        console.log('⟳ Waiting for table data...');
+        await page.waitForSelector('#DataTables_Table_0, table.dataTable', { timeout: 30000 });
+        await page.waitForTimeout(2000);
 
-        // Wait for table initialization
-        await page.waitForSelector('table.dataTable', { timeout: 15000 });
-
-        // Expand DataTable page size to show all rows if menu is available
+        // 4. Expand DataTable length menu to "All"
         const lengthSelect = page.locator('select[name$="_length"]');
         if (await lengthSelect.count() > 0) {
             console.log('⟳ Changing table length menu to "All"...');
             await lengthSelect.selectOption('-1');
-            await page.waitForTimeout(2000); // Allow DOM redraw
+            await page.waitForTimeout(1500);
         }
 
         console.log('⟳ Scraping table data...');
-
-        // Scrape table content from the DOM
         const records = await page.evaluate(() => {
-            const rows = Array.from(document.querySelectorAll('table.dataTable tbody tr'));
+            const rows = Array.from(document.querySelectorAll('#DataTables_Table_0 tbody tr, table.dataTable tbody tr'));
 
             return rows.map((row) => {
                 const cells = Array.from(row.querySelectorAll('td')).map((td) => td.innerText.trim());
-                if (cells.length < 10) return null; // Skip empty/loading indicator rows
+                if (cells.length < 10) return null;
 
                 return {
                     studentName: cells[1] || null,
@@ -78,8 +88,8 @@ async function fetchUploadedRecords(outputPath = 'uploaded_records.json') {
                     enrollmentNo: cells[8] || null,
                     grNumber: cells[9] || null,
                     serialNo: cells[10] || null,
-                    cnic: cells[11] || null,
-                    status: cells[12] || null,
+                    cnic: cells[11] || cells[6] || null,
+                    status: cells[12] || 'Uploaded',
                     challanNo: cells[13] || null,
                     fee: cells[14] || null,
                     createdDate: cells[15] || null
@@ -87,18 +97,19 @@ async function fetchUploadedRecords(outputPath = 'uploaded_records.json') {
             }).filter(Boolean);
         });
 
-        // Save entire table output
         const absoluteOutputPath = path.resolve(outputPath);
         fs.writeFileSync(absoluteOutputPath, JSON.stringify(records, null, 2), 'utf-8');
 
-        // Extract clean list of GR numbers
         const grNumbers = records.map((r) => r.grNumber).filter(Boolean);
 
-        console.log(`\n✓ Extracted ${records.length} records.`);
-        console.log(`- Full data written to: ${absoluteOutputPath}`);
-        console.log(`- Found ${grNumbers.length} GR numbers uploaded on the portal.`);
+        console.log(`✓ Extracted ${records.length} records.`);
+        console.log(`- Data saved to: ${absoluteOutputPath}`);
 
         return { records, grNumbers };
+
+    } catch (error) {
+        console.error('❌ Scraper failed:', error.message);
+        throw error;
     } finally {
         await browser.close();
     }

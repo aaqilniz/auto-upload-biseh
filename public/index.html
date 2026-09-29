@@ -14,18 +14,33 @@
     <div class="max-w-7xl mx-auto space-y-6">
 
         <!-- Header -->
-        <header class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <header
+            class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">BISE Hyderabad Enrollment Dashboard</h1>
-                <p class="text-slate-500 text-sm mt-1">Manage data parsing, image uploads, portal automation, and PDF exports.</p>
+                <p class="text-slate-500 text-sm mt-1">Manage data parsing, image uploads, portal automation, and PDF
+                    exports.</p>
             </div>
-            
-            <!-- Global Configuration: School Name & Single-Year Session -->
+
+            <!-- Global Configuration -->
             <div class="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
                 <div>
-                    <label for="cfgSchool" class="block text-xs font-semibold text-slate-600 uppercase">School Name</label>
+                    <label for="cfgSchool" class="block text-xs font-semibold text-slate-600 uppercase">School
+                        Name</label>
                     <input type="text" id="cfgSchool" value="GBHS CHUKHI"
                         class="mt-1 px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="cfgUsername"
+                        class="block text-xs font-semibold text-slate-600 uppercase">Username</label>
+                    <input type="text" id="cfgUsername" value="0456@biseh.edu.pk"
+                        class="mt-1 px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-32" />
+                </div>
+                <div>
+                    <label for="cfgPassword"
+                        class="block text-xs font-semibold text-slate-600 uppercase">Password</label>
+                    <input type="password" id="cfgPassword" value=""
+                        class="mt-1 px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-32" />
                 </div>
                 <div>
                     <label for="cfgSession" class="block text-xs font-semibold text-slate-600 uppercase">Session Year</label>
@@ -75,9 +90,9 @@
             <div id="statusBanner" class="hidden p-3 rounded-md text-sm font-medium"></div>
         </section>
 
-        <!-- Data Tables View -->
+        <!-- Main View Container -->
         <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <!-- Tabs Header & Export Button -->
+            <!-- Tabs Header -->
             <div class="flex flex-wrap items-center justify-between border-b border-slate-200 bg-slate-50 pr-4">
                 <div class="flex border-b border-slate-200 md:border-b-0">
                     <button id="tabProcessed" onclick="switchTab('processed')"
@@ -92,21 +107,29 @@
                         class="px-6 py-3 font-semibold text-sm text-slate-500 hover:text-slate-700">
                         Failed Validation / Uploads (<span id="countFailed">0</span>)
                     </button>
+                    <button id="tabImages" onclick="switchTab('images')"
+                        class="px-6 py-3 font-semibold text-sm text-slate-500 hover:text-slate-700">
+                        Uploaded Images Gallery (<span id="countImages">0</span>)
+                    </button>
                 </div>
 
-                <button onclick="exportCurrentTabToPDF()"
+                <button id="btnExportPDF" onclick="exportCurrentTabToPDF()"
                     class="my-2 bg-red-600 hover:bg-red-700 text-white py-1.5 px-4 rounded-md font-medium text-sm flex items-center gap-2 transition">
                     <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                        <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z"/>
+                        <path
+                            d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" />
                     </svg>
                     Export Section PDF
                 </button>
             </div>
 
             <!-- Overlap Warning Message Banner (Failed Tab Only) -->
-            <div id="failedOverlapAlert" class="hidden bg-amber-50 border-b border-amber-200 p-4 text-amber-800 text-sm font-medium flex items-center gap-2">
+            <div id="failedOverlapAlert"
+                class="hidden bg-amber-50 border-b border-amber-200 p-4 text-amber-800 text-sm font-medium flex items-center gap-2">
                 <svg class="w-5 h-5 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    <path fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
                 </svg>
                 <span id="failedOverlapText">Notice: Some failed records are already uploaded on the portal.</span>
             </div>
@@ -132,8 +155,8 @@
                 </div>
             </div>
 
-            <!-- Table Container -->
-            <div class="p-6 overflow-x-auto min-h-[300px]">
+            <!-- Data View Area -->
+            <div id="tableView" class="p-6 overflow-x-auto min-h-[300px]">
                 <table class="w-full text-left text-sm border-collapse">
                     <thead id="tableHead"
                         class="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase text-xs select-none">
@@ -142,11 +165,33 @@
                 </table>
                 <div id="emptyMessage" class="hidden text-center text-slate-400 py-12">No records found.</div>
             </div>
+
+            <!-- Images Gallery View Area -->
+            <div id="imagesView" class="hidden p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Uploaded Student Photos</p>
+                    <button onclick="loadUploadedImages()"
+                        class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <!-- Expanded Responsive Grid (No internal scrollbar) -->
+                <div id="imageGrid"
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 p-1">
+                </div>
+                <div id="emptyImageMsg" class="hidden text-center text-slate-400 py-16 text-sm">No uploaded images
+                    found.</div>
+            </div>
         </section>
     </div>
 
     <script>
-        // Set Default Session to current year + 1 (e.g. 2026 + 1 = 2027)
         const defaultSessionYear = String(new Date().getFullYear() + 1);
         document.getElementById('cfgSession').value = defaultSessionYear;
 
@@ -154,9 +199,9 @@
         let rawProcessedData = [];
         let rawUploadedData = [];
         let rawFailedData = [];
+        let rawImagesData = [];
         let currentRenderedList = [];
 
-        // Sorting state management per tab
         const sortState = {
             processed: { key: 'grNumber', direction: 'asc' },
             uploaded: { key: 'grNumber', direction: 'asc' },
@@ -169,18 +214,171 @@
             banner.classList.add(isError ? 'bg-red-100' : 'bg-blue-100', isError ? 'text-red-700' : 'text-blue-700');
             banner.textContent = msg;
         };
+        const getHeaderConfigs = () => {
+            return {
+                schoolName: document.getElementById('cfgSchool').value || 'GBHS CHUKHI',
+                username: document.getElementById('cfgUsername').value || '424699',
+                password: document.getElementById('cfgPassword').value || '424699',
+                session: document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1)
+            };
+        };
+        const loadUploadedImages = async () => {
+            const grid = document.getElementById('imageGrid');
+            const emptyMsg = document.getElementById('emptyImageMsg');
+            const countBadge = document.getElementById('countImages');
+
+            try {
+                const res = await fetch('/api/images');
+                if (!res.ok) throw new Error('Failed to load images');
+
+                rawImagesData = await res.json();
+                countBadge.textContent = rawImagesData.length;
+                grid.innerHTML = '';
+
+                if (rawImagesData.length === 0) {
+                    emptyMsg.classList.remove('hidden');
+                    return;
+                }
+
+                emptyMsg.classList.add('hidden');
+
+                // Build a unified lookup map from Processed, Uploaded, and Failed datasets
+                const studentMap = {};
+
+                // 1. Processed Data
+                rawProcessedData.forEach(s => {
+                    if (s.grNumber) {
+                        studentMap[String(s.grNumber).trim()] = {
+                            name: s.name,
+                            fatherName: s.fatherName,
+                            caste: s.caste || s.surname,
+                            gender: s.gender,
+                            status: 'processed'
+                        };
+                    }
+                });
+
+                // 2. Uploaded Data
+                rawUploadedData.forEach(s => {
+                    if (s.grNumber && !studentMap[String(s.grNumber).trim()]) {
+                        studentMap[String(s.grNumber).trim()] = {
+                            name: s.studentName || s.name,
+                            fatherName: s.fatherName,
+                            caste: s.surname || s.caste,
+                            gender: s.gender,
+                            status: 'uploaded'
+                        };
+                    }
+                });
+
+                // 3. Failed Data (Extract nested student object if present)
+                rawFailedData.forEach(f => {
+                    const studentObj = f.student || f.data || f;
+                    const gr = String(f.grNumber || studentObj.grNumber || '').trim();
+
+                    if (gr && !studentMap[gr]) {
+                        studentMap[gr] = {
+                            name: studentObj.name || studentObj.studentName,
+                            fatherName: studentObj.fatherName,
+                            caste: studentObj.caste || studentObj.surname,
+                            gender: studentObj.gender,
+                            status: 'failed',
+                            reasons: f.reasons
+                        };
+                    }
+                });
+
+                rawImagesData.forEach(filename => {
+                    const grNumber = filename.split('.')[0] ? filename.split('.')[0].trim() : filename;
+                    const student = studentMap[grNumber];
+
+                    let displayName = '';
+                    let isFailed = false;
+
+                    if (student) {
+                        const name = (student.name || '').trim();
+                        const fatherName = (student.fatherName || '').trim();
+                        const caste = (student.caste || '').trim();
+                        const gender = (student.gender || '').toLowerCase();
+                        isFailed = student.status === 'failed';
+
+                        // Determine S/O or D/O based on gender field
+                        const relation = (gender === 'female' || gender === 'f') ? 'D/O' : 'S/O';
+                        const formattedFather = fatherName ? `${relation} ${fatherName}` : '';
+
+                        displayName = [name, formattedFather, caste].filter(Boolean).join(' ');
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = `relative group border rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200 ${isFailed ? 'border-red-300 bg-red-50/30' : 'border-slate-200'
+                        }`;
+
+                    const grBadgeClass = isFailed ? 'text-red-600 font-bold' : 'text-blue-600 font-bold';
+                    const nameTextClass = isFailed ? 'text-red-700 font-semibold' : 'text-slate-800 font-semibold';
+
+                    card.innerHTML = `
+                <button onclick="deleteImage('${filename}')" 
+                    title="Delete ${filename}" 
+                    class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10 opacity-90 hover:opacity-100 transition">
+                    &times;
+                </button>
+                <div class="h-44 bg-slate-100 flex items-center justify-center overflow-hidden">
+                    <img src="/uploads/${filename}" alt="${filename}" class="object-cover h-full w-full group-hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src='https://via.placeholder.com/200x240?text=No+Image';"/>
+                </div>
+                <div class="p-2.5 bg-white border-t border-slate-100">
+                    <div class="flex items-center justify-between gap-1">
+                        <p class="text-xs ${grBadgeClass}" title="GR: ${grNumber}">GR: ${grNumber}</p>
+                        ${isFailed ? '<span class="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded">Failed</span>' : ''}
+                    </div>
+                    <p class="text-xs ${nameTextClass} line-clamp-2 mt-0.5 leading-snug" title="${displayName || 'Student Data Not Found'}">
+                        ${displayName ? displayName : '<span class="text-slate-400 font-normal italic">Details not found</span>'}
+                    </p>
+                </div>
+            `;
+                    grid.appendChild(card);
+                });
+            } catch (err) {
+                console.error('Error fetching images:', err);
+            }
+        };
+
+        const deleteImage = async (filename) => {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+            try {
+                const res = await fetch(`/api/images/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) {
+                    setStatus(`Image ${filename} deleted successfully.`);
+                    loadUploadedImages();
+                } else {
+                    setStatus(data.error || 'Failed to delete image', true);
+                }
+            } catch (err) {
+                setStatus('Error deleting image: ' + err.message, true);
+            }
+        };
 
         const switchTab = (tab) => {
             currentTab = tab;
-            ['processed', 'uploaded', 'failed'].forEach(t => {
+            ['processed', 'uploaded', 'failed', 'images'].forEach(t => {
                 const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 btn.className = (t === tab)
                     ? 'px-6 py-3 font-semibold text-sm text-blue-600 border-b-2 border-blue-600 bg-white'
                     : 'px-6 py-3 font-semibold text-sm text-slate-500 hover:text-slate-700';
             });
 
+            const isImagesTab = tab === 'images';
             document.getElementById('statsBar').classList.toggle('hidden', tab !== 'processed');
-            renderCurrentTable();
+            document.getElementById('btnExportPDF').classList.toggle('hidden', isImagesTab);
+            document.getElementById('tableView').classList.toggle('hidden', isImagesTab);
+            document.getElementById('imagesView').classList.toggle('hidden', !isImagesTab);
+
+            if (!isImagesTab) {
+                renderCurrentTable();
+            } else {
+                loadUploadedImages();
+            }
         };
 
         const handleSort = (key) => {
@@ -220,14 +418,13 @@
             btnElement.textContent = 'Uploading...';
             setStatus(`Uploading single record GR# ${grNumber}...`);
 
-            const schoolName = document.getElementById('cfgSchool').value || 'GBHS CHUKHI';
-            const sessionVal = document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1);
+            const config = getHeaderConfigs();
 
             try {
                 const res = await fetch('/api/upload-single', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ grNumber, schoolName, session: sessionVal })
+                    body: JSON.stringify({ grNumber, ...config })
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -390,14 +587,13 @@
                     };
                 });
 
-                // Detect overlaps and render notice banner
                 const overlappingGRs = formattedFailed
                     .filter(item => item.isAlreadyUploaded && item.grNumber !== '-')
                     .map(item => item.grNumber);
 
                 if (overlappingGRs.length > 0) {
                     overlapAlert.classList.remove('hidden');
-                    document.getElementById('failedOverlapText').innerHTML = 
+                    document.getElementById('failedOverlapText').innerHTML =
                         `<strong>Attention:</strong> ${overlappingGRs.length} record(s) in this failed list are already confirmed uploaded on the portal! (GR#: <strong>${overlappingGRs.join(', ')}</strong>)`;
                 }
 
@@ -434,9 +630,7 @@
         const exportCurrentTabToPDF = () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'pt', 'a4');
-
-            const schoolName = document.getElementById('cfgSchool').value || 'GBHS CHUKHI';
-            const sessionVal = document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1);
+            const config = getHeaderConfigs();
 
             let sectionTitle = '';
             let tableHeaders = [];
@@ -478,7 +672,6 @@
                     item.reasonsText || '-'
                 ]);
 
-                // Check for overlapping records to print on PDF
                 const overlappingGRs = currentRenderedList
                     .filter(item => item.isAlreadyUploaded && item.grNumber !== '-')
                     .map(item => item.grNumber);
@@ -488,31 +681,28 @@
                 }
             }
 
-            // Document Header
             doc.setFontSize(16);
             doc.setFont('helvetica', 'bold');
-            doc.text(schoolName.toUpperCase(), 40, 40);
+            doc.text(config.schoolName.toUpperCase(), 40, 40);
 
             doc.setFontSize(11);
             doc.setFont('helvetica', 'normal');
-            doc.text(`Board Enrollment Class 9th - Session ${sessionVal}`, 40, 58);
+            doc.text(`Board Enrollment Class 9th - Session ${config.session}`, 40, 58);
             doc.text(`List: ${sectionTitle}`, 40, 74);
 
             let startY = 95;
 
-            // Render Overlap Warning Box in PDF if applicable
             if (overlapNoticeText) {
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'bold');
-                doc.setTextColor(180, 83, 9); // Amber color
-                doc.setFillColor(254, 243, 199); // Amber light bg
+                doc.setTextColor(180, 83, 9);
+                doc.setFillColor(254, 243, 199);
                 doc.rect(40, 82, 515, 20, 'F');
                 doc.text(overlapNoticeText, 45, 95);
-                
-                // Reset colors for line and table
+
                 doc.setTextColor(0, 0, 0);
                 doc.setFont('helvetica', 'normal');
-                
+
                 doc.setLineWidth(1);
                 doc.line(40, 108, 555, 108);
                 startY = 120;
@@ -521,7 +711,6 @@
                 doc.line(40, 84, 555, 84);
             }
 
-            // AutoTable Rendering
             doc.autoTable({
                 startY: startY,
                 head: tableHeaders,
@@ -532,7 +721,7 @@
                 alternateRowStyles: { fillColor: [248, 250, 252] }
             });
 
-            doc.save(`${schoolName.replace(/\s+/g, '_')}_Class9_Session${sessionVal}_${currentTab}.pdf`);
+            doc.save(`${config.schoolName.replace(/\s+/g, '_')}_Class9_Session${config.session}_${currentTab}.pdf`);
         };
 
         const updateStats = () => {
@@ -599,44 +788,69 @@
             const data = await res.json();
             if (res.ok) {
                 setStatus(data.message);
+                loadUploadedImages();
             } else {
                 setStatus(data.error || 'Image upload failed', true);
             }
         });
 
+        // Run Bulk Upload (Passing JSON Body)
         document.getElementById('btnRunUpload').addEventListener('click', async () => {
             setStatus('Executing Playwright bulk upload...');
-            const schoolName = document.getElementById('cfgSchool').value || 'GBHS CHUKHI';
-            const sessionVal = document.getElementById('cfgSession').value || String(new Date().getFullYear() + 1);
+            const config = getHeaderConfigs();
 
-            const res = await fetch('/api/run-upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uploadData: true, schoolName, session: sessionVal })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setStatus(`Automation completed. ${data.successfulRecords.length} successful, ${data.failedRecords.length} failed.`);
-                loadTableData();
-            } else {
-                setStatus(data.error || 'Upload script failed', true);
+            try {
+                const res = await fetch('/api/run-upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uploadData: true,
+                        username: config.username,
+                        password: config.password,
+                        session: config.session
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setStatus(`Automation completed. ${data.successfulRecords.length} successful, ${data.failedRecords.length} failed.`);
+                    loadTableData();
+                } else {
+                    setStatus(data.error || 'Upload script failed', true);
+                }
+            } catch (err) {
+                setStatus('Error executing upload: ' + err.message, true);
             }
         });
 
+        // Fetch Scraped Portal Records (Passing Query Params)
         document.getElementById('btnFetchRecords').addEventListener('click', async () => {
             setStatus('Scraping uploaded records from portal...');
-            const res = await fetch('/api/fetch-records');
-            const data = await res.json();
-            if (res.ok) {
-                setStatus(`Scraped ${data.records.length} records from portal.`);
-                loadTableData();
-            } else {
-                setStatus(data.error || 'Fetch script failed', true);
+            const config = getHeaderConfigs();
+
+            // Construct query parameters using dashboard inputs
+            const params = new URLSearchParams({
+                username: config.username,
+                password: config.password,
+                session: config.session
+            });
+
+            try {
+                const res = await fetch(`/api/fetch-records?${params.toString()}`);
+                const data = await res.json();
+                if (res.ok) {
+                    setStatus(`Scraped ${data.records.length} records from portal.`);
+                    loadTableData();
+                } else {
+                    setStatus(data.error || 'Fetch script failed', true);
+                }
+            } catch (err) {
+                setStatus('Error fetching records: ' + err.message, true);
             }
         });
 
         switchTab('processed');
         loadTableData();
+        loadUploadedImages();
     </script>
 </body>
 
