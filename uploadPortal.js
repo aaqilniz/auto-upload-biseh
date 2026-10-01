@@ -21,7 +21,7 @@ async function uploadToPortal(jsonFilePathOrArray = 'students.json', uploadData 
         console.log(`\n⟳ Loaded ${validStudents.length} student records from ${absoluteJsonPath}`);
     }
 
-    const headless = true;
+    const headless = false;
     const browser = await chromium.launch({ headless, slowMo: 50 });
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 
@@ -126,24 +126,41 @@ async function uploadToPortal(jsonFilePathOrArray = 'students.json', uploadData 
 
                 let isSuccess = false;
                 if (uploadData) {
-                    const dialogHandler = async (dialog) => {
-                        console.log(`Dialog prompt popped up: "${dialog.message()}" -> Accepting`);
-                        await dialog.accept();
-                    };
-                    page.once('dialog', dialogHandler);
-                    await page.$eval('#btn-create', (el) => el.click());
-                    await delay(5000);
-                    await page.click('#btn-create', { force: true });
-                    const successMsg = page.locator('p.msg-success:has-text("Enrollment Created Sucessfully")');
                     try {
-                        await successMsg.waitFor({ state: 'visible', timeout: 5000 });
-                        await page.getByRole('button', { name: 'Ok' }).click();
+                        // 1. Setup dialog handler BEFORE clicking
+                        const dialogPromise = page.waitForEvent('dialog', { timeout: 5000 })
+                            .then(async (dialog) => {
+                                console.log(`Dialog prompt popped up: "${dialog.message()}" -> Accepting`);
+                                await dialog.accept();
+                            })
+                            .catch(() => {
+                                // Ignore if no dialog pops up (in case dialog is optional/conditional)
+                            });
+
+                        // 2. Perform a SINGLE click (let Playwright actionability checks handle readiness)
+                        await page.click('#btn-create');
+                        await dialogPromise;
+
+                        // 3. Match success message with flexible regex (handles typos and whitespace)
+                        const successMsg = page.locator('p.msg-success', {
+                            hasText: /Enrollment Created Suces*fully/i
+                        });
+
+                        // 4. Increase timeout to cover slow backend responses
+                        await successMsg.waitFor({ state: 'visible', timeout: 15000 });
+
+                        // 5. Safely handle the OK modal button if displayed
+                        const okBtn = page.getByRole('button', { name: 'Ok' });
+                        if (await okBtn.isVisible({ timeout: 2000 })) {
+                            await okBtn.click();
+                        }
+
                         isSuccess = true;
-                    } catch {
+                    } catch (err) {
+                        console.error('Enrollment assertion failed:', err.message);
                         isSuccess = false;
                     }
                 } else {
-                    await delay(10000);
                     await page.reload({ waitUntil: 'networkidle' });
                 }
 
