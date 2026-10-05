@@ -65,7 +65,7 @@ function convertExcelToJson(excelFilePath, outputValidPath = 'students.json', ou
             gender: record[22] ? String(record[22]).trim() : null,
             mediumOfAnswer: record[23] ? String(record[23]).trim() : DEFAULT_MEDIUM_OF_ANSWER
         };
-
+        if (!rawStudent.studentNadraId) rawStudent.studentNadraId = rawStudent.parentCnic;
         const reasons = [];
         if (!rawStudent.grNumber) reasons.push('GR Number');
         if (!rawStudent.name) reasons.push('Student Name');

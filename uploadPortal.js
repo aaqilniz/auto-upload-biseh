@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { type } = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
 require('dotenv').config();
@@ -9,7 +10,12 @@ const delay = (duration) => new Promise((resolve) => setTimeout(resolve, duratio
  */
 async function uploadToPortal(jsonFilePathOrArray = 'students.json', uploadData = false) {
     let validStudents = [];
-
+    const absoluteJsonPathForUploadedRecords = path.resolve('uploaded_records.json');
+    const alreadyUploadedStudents = JSON.parse(fs.readFileSync(absoluteJsonPathForUploadedRecords, 'utf-8'));
+    const alreadyUploadedStudentGRs = [];
+    alreadyUploadedStudents.forEach(uploadedStudent => {
+        alreadyUploadedStudentGRs.push(uploadedStudent.grNumber);
+    });
     if (Array.isArray(jsonFilePathOrArray)) {
         validStudents = jsonFilePathOrArray;
     } else {
@@ -81,6 +87,9 @@ async function uploadToPortal(jsonFilePathOrArray = 'students.json', uploadData 
 
         for (let i = 0; i < validStudents.length; i++) {
             const student = validStudents[i];
+            if (alreadyUploadedStudentGRs.includes(student.grNumber)) {
+                continue; // skip this student - already uploaded
+            }
             try {
                 await page.fill('#sName', student.name);
                 await page.fill('#fatherName', student.fatherName);

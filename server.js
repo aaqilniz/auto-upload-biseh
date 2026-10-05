@@ -65,12 +65,26 @@ app.post('/api/upload-images', upload.array('images', 500), (req, res) => {
 app.post('/api/run-upload', async (req, res) => {
     try {
         const executeUpload = req.body.uploadData ?? true;
+        const studentRecordsPath = path.resolve('students.json');
+        const allStudents = JSON.parse(fs.readFileSync(studentRecordsPath, 'utf-8'));
         const result = await uploadToPortal('students.json', executeUpload);
+
+        const successfullGrs = result.successfulRecords;
+        const successfullStudents = [];
+        allStudents.forEach(student => {
+            if (successfullGrs.includes(student.grNumber)) {
+                successfullStudents.push({ grNumber: student.grNumber, studentName: student.name });
+            }
+        })
+        if (successfullStudents.length) {
+            // Append uploaded GR to uploaded_records.json locally so UI updates immediately
+            fs.writeFileSync(path.resolve('uploaded_records.json'), JSON.stringify(successfullStudents, null, 2));
+        }
         res.json({
             message: 'Portal automation complete.',
             successfulRecords: result.successfulRecords,
             failedRecords: result.failedRecords
-        });
+        })
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
